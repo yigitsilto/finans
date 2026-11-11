@@ -21,3 +21,15 @@
 - İlk Admin `php artisan finans:create-admin <kullanici>` komutuyla oluşturuluyor (parola gizli olarak soruluyor). Geliştirme ortamı için `db:seed` örnek kullanıcıları `.env` içindeki `DEV_SEED_PASSWORD` ile oluşturuyor.
 - Türkçe doğrulama mesajları ve hata sayfaları (403, 404, 419, 429, 500, 503) eklendi.
 - Doğrulama: 46/46 test geçiyor, Pint geçiyor, viewer ve admin akışları tarayıcıda denendi.
+
+## Sprint 3: Hesap ve Finansal Hareket Altyapısı (2026-11-12)
+
+- Yeni tablolar: `companies` (tek şirket, çoklu şirkete hazır), `categories` (PRD'deki 50 standart kategori migration ile yükleniyor), `accounts`, `transactions`.
+- Kasa, banka ve POS hesapları eklendi. IBAN şifreli saklanıyor, mod-97 ile doğrulanıyor, ekranda ve denetim kaydında maskeleniyor. Bakiyesi sıfır olmayan hesap pasife alınamıyor.
+- Tek hareket defteri: açılış, giriş, çıkış, transfer. Bakiye saklanmıyor, hareketlerden hesaplanıyor. Kurallar `TransactionService` ve veritabanı CHECK kısıtları ile uygulanıyor.
+- POS: valör tarihi zorunlu; tek tek veya toplu ("vadesi gelenleri aktar") bankaya transfer ediliyor; aynı tahsilat iki kez aktarılamıyor.
+- Ters kayıtla iptal, sınırlı düzenleme, eksi bakiye koruması (geriye tarihli kayıtlar dahil), ileri tarih engeli.
+- Ekranlar: Hesaplar, Banka ve Kasa (likidite kartları), hesap ekstresi (yürüyen bakiye), Nakit Girişleri ve Çıkışları (filtre, sıralama, sayfalama, filtreye göre toplam), hareket detayı (iptal ve değişiklik geçmişi), POS / Blokeli Hesaplar.
+- Para: `App\Support\Money` ile Türkçe tutar girişi ve gösterimi; tüm hesaplar BigDecimal veya PostgreSQL NUMERIC ile.
+- **Düzeltme:** Bekleyen POS sorgusunda, kendine referanslı ilişkide iç içe `whereDoesntHave` yanlış tablo takma adına bağlanıyordu; aktarım transferi iptal edilince tahsilat bekleyene dönmüyordu. Test yakaladı, sorgu açık SQL ile yeniden yazıldı.
+- Doğrulama: 110/110 test, Pint temiz. Tarayıcıda hesap açma (açılış bakiyesiyle), ekstre, bakiyeyi aşan çıkışın reddedilmesi, Banka ve Kasa ile POS ekranları denendi.

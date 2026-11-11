@@ -19,6 +19,14 @@
             </div>
         </div>
         <nav>
+            @php
+                // Parametreli öğe (ör. ?type=inflow) eşleşirse yalnızca o aktif olur; yoksa route desenine bakılır.
+                $menuItems = collect(config('menu'))->pluck('items')->flatten(1)->filter(fn ($i) => $i['route']);
+                $paramMatch = $menuItems->first(fn ($i) => isset($i['params']) && request()->routeIs($i['active'] ?? $i['route'])
+                    && collect($i['params'])->every(fn ($v, $k) => request()->query($k) === $v));
+                $isActive = fn ($i) => $paramMatch ? $i === $paramMatch
+                    : (! isset($i['params']) && request()->routeIs($i['active'] ?? $i['route']));
+            @endphp
             @foreach (config('menu') as $group)
                 @php
                     $items = array_filter($group['items'], fn ($item) => ! isset($item['can']) || Gate::allows($item['can']));
@@ -31,8 +39,8 @@
                     @foreach ($items as $item)
                         <li>
                             @if ($item['route'])
-                                <a href="{{ route($item['route']) }}"
-                                   class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}">{{ $item['label'] }}</a>
+                                <a href="{{ route($item['route'], $item['params'] ?? []) }}"
+                                   class="nav-link {{ $isActive($item) ? 'active' : '' }}">{{ $item['label'] }}</a>
                             @else
                                 <span class="nav-link disabled" title="Sprint {{ $item['sprint'] }} ile gelecek">
                                     {{ $item['label'] }}<em>S{{ $item['sprint'] }}</em>

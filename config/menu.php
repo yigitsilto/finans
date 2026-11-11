@@ -2,6 +2,8 @@
 
 /*
 | Ana menü. 'route' => null olan öğeler henüz geliştirilmedi ve pasif görünür.
+| 'params' route parametreleri; menü öğesi, URL parametreleri de eşleşirse aktif görünür.
+| 'active' yalnızca route adına göre aktiflik deseni (params yoksa kullanılır).
 | 'can' verilen öğeler yalnızca o yetkiye sahip kullanıcıya gösterilir.
 | Menü gizleme güvenlik değildir; asıl kontrol route'lardaki `can:` middleware'idir.
 */
@@ -16,11 +18,12 @@ return [
     [
         'title' => 'Finans',
         'items' => [
-            ['label' => 'Hesaplar', 'route' => null, 'sprint' => 3],
-            ['label' => 'Nakit Girişleri', 'route' => null, 'sprint' => 3],
-            ['label' => 'Nakit Çıkışları', 'route' => null, 'sprint' => 3],
-            ['label' => 'Banka ve Kasa', 'route' => null, 'sprint' => 3],
-            ['label' => 'POS / Blokeli Hesaplar', 'route' => null, 'sprint' => 3],
+            ['label' => 'Hesaplar', 'route' => 'accounts.index', 'active' => 'accounts.*'],
+            ['label' => 'Nakit Girişleri', 'route' => 'transactions.index', 'params' => ['type' => 'inflow'], 'active' => 'transactions.*'],
+            ['label' => 'Nakit Çıkışları', 'route' => 'transactions.index', 'params' => ['type' => 'outflow'], 'active' => 'transactions.*'],
+            ['label' => 'Banka ve Kasa', 'route' => 'accounts.index', 'params' => ['type' => 'available']],
+            ['label' => 'POS / Blokeli Hesaplar', 'route' => 'pos.index'],
+            ['label' => 'Tüm Hareketler', 'route' => 'transactions.index', 'active' => 'transactions.*'],
             ['label' => 'Ortaklar Cari', 'route' => null, 'sprint' => 4],
             ['label' => 'Krediler', 'route' => null, 'sprint' => 4],
         ],
