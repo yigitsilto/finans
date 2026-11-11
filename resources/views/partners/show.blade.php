@@ -53,6 +53,7 @@
                                     <summary class="btn btn-secondary btn-sm">İptal</summary>
                                     <form method="POST" action="{{ route('partners.adjustments.reverse', $m) }}" class="stack-form">
                                         @csrf
+                                        <div class="modal-title">Cari düzeltmeyi iptal et</div>
                                         <label>Neden <input name="reason" class="input input-sm" required minlength="3"></label>
                                         <button class="btn btn-danger btn-sm">Ters kayıt oluştur</button>
                                     </form>

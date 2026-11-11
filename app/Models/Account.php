@@ -19,6 +19,9 @@ class Account extends Model
 
     protected $guarded = ['id', 'company_id', 'created_by'];
 
+    /** Veritabanı varsayılanıyla aynı; kaydedilmeden önce de doğru davranması için. */
+    protected $attributes = ['is_active' => true];
+
     protected $hidden = ['iban'];
 
     protected function casts(): array

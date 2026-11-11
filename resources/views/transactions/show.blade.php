@@ -49,6 +49,9 @@
                 @if ($t->loan)
                     <dt>Kredi</dt><dd><a href="{{ route('loans.show', $t->loan) }}">{{ $t->loan->name }}</a></dd>
                 @endif
+                @if ($t->receivable)
+                    <dt>Alacak</dt><dd><a href="{{ route('receivables.show', $t->receivable) }}">{{ $t->receivable->reference_no }}</a></dd>
+                @endif
                 @if ($t->recurringExpense)
                     <dt>Tekrarlayan gider</dt><dd>{{ $t->recurringExpense->name }} · {{ $t->expense_period->locale('tr')->translatedFormat('F Y') }}</dd>
                 @endif

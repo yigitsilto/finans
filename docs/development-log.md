@@ -33,3 +33,44 @@
 - Para: `App\Support\Money` ile Türkçe tutar girişi ve gösterimi; tüm hesaplar BigDecimal veya PostgreSQL NUMERIC ile.
 - **Düzeltme:** Bekleyen POS sorgusunda, kendine referanslı ilişkide iç içe `whereDoesntHave` yanlış tablo takma adına bağlanıyordu; aktarım transferi iptal edilince tahsilat bekleyene dönmüyordu. Test yakaladı, sorgu açık SQL ile yeniden yazıldı.
 - Doğrulama: 110/110 test, Pint temiz. Tarayıcıda hesap açma (açılış bakiyesiyle), ekstre, bakiyeyi aşan çıkışın reddedilmesi, Banka ve Kasa ile POS ekranları denendi.
+
+## Sprint 4: Giderler, Ortaklar ve Krediler (2026-11-13)
+
+- Yeni tablolar: `partners`, `partner_adjustments`, `loans`, `loan_installments` (`total` veritabanında hesaplanan sütun), `recurring_expenses`. `transactions` tablosuna `partner_id`, `loan_id`, `loan_installment_id`, `recurring_expense_id` ve `expense_period` eklendi. Kategorilere `link_type` (partner / loan) alanı ve "Ortaktan alınan borç" ile "Ortağa borç geri ödemesi" kategorileri eklendi.
+- `LoanScheduleCalculator` (annüite, BigDecimal) ve `LoanService` eklendi: kullandırım, sıralı taksit ödemesi (anapara ve faiz ayrı), ödeme iptali, plan düzeltme, kredi özeti.
+- `PartnerService` eklendi: sermaye cariden ayrı, cari bakiye, yürüyen cari ekstresi, nakitsiz düzeltmeler ve iptalleri.
+- `ExpenseService` eklendi: aylık tekrarlayan gider durumu (ödendi / bekliyor / gecikti), ayda bir ödeme, gider analizi (sabit ve değişken oranları).
+- Ekranlar: Krediler (liste, oluşturma, taksit planı ve ödeme), Ortaklar Cari (liste, ekstre, düzeltme), Giderler (aylık durum, analiz, tekrarlayan gider formu). Genel hareket formuna ortak seçimi eklendi.
+- Tablo içindeki küçük işlem formları JS'siz modal pencerelere dönüştürüldü; önceki hali tablonun kaydırma alanında kırpılıyordu (tarayıcı testinde bulundu).
+- Düzeltme: yeni oluşturulan modellerde `is_active` kaydedilmeden önce boş kalıyordu; modellere varsayılan değer eklendi (test yakaladı).
+- Doğrulama: 134/134 test, Pint temiz. Annüite sonucu Python Decimal ile bağımsız olarak doğrulandı. Tarayıcıda kredi oluşturma, taksit ödeme ve gider ekranı denendi.
+
+## Sprint 5: Müşteri Alacakları ve Tahsilat (2026-11-14)
+
+- Yeni tablolar: `customers` (TCKN/VKN şifreli) ve `receivables` (tahsil edilen/kalan tutar saklanmıyor). `transactions` tablosuna `receivable_id` eklendi. PostgreSQL trigger'ları: `check_receivable_collection` (fazla tahsilat, yalnızca nakit girişi, iptal edilmiş alacak) ve `check_receivable_update` (tutarın tahsilatın altına düşmemesi, tahsilatlı alacağın iptal edilememesi).
+- `ReceivableService` eklendi: alacak oluşturma ve düzenleme, kısmi/tam tahsilat (kasa, banka, POS), iptal.
+- Ekranlar: Müşteri Alacakları (durum ve vade filtreleri, sıralama, sayfalama, filtreye göre toplamlar), alacak detayı (tahsilat formu, tahsilat geçmişi, iptal), Müşteriler (açık alacak toplamı, müşteri bazlı alacak listesi). Müşteri ekledikten sonra alacak formuna dönme akışı eklendi.
+- Doğrulama: 151/151 test, Pint temiz. Trigger'ın eşzamanlı iki tahsilatı engellediği test veritabanında iki gerçek oturumla denendi. Tarayıcıda müşteri, alacak, fazla tahsilat hatası ve kısmi tahsilat akışı denendi.
+
+## Sprint 6: Alacak Yaşlandırma (2026-11-15)
+
+- `AgingService` eklendi: tek SQL sorgusuyla rapor tarihindeki kalan tutar (`LATERAL` alt sorgu), gecikme günü ve dilim. Dilim toplamları, yüzdeler, müşteri bazlı dağılım ve vadesi geçmiş toplamı hesaplanıyor. Tüm toplamlar BigDecimal ile; sıralamada bile float yok.
+- Yaşlandırma ekranı: rapor tarihi seçimi (geçmiş tarih uyarısıyla), müşteri filtresi, müşteri bazlı veya alacak detaylı görünüm. 5 dilim kartı risk renkleriyle gösteriliyor ve tıklanınca o dilime filtreliyor. Kritik risk uyarısı eklendi.
+- PRD'deki 0. gün çelişkisi belgelendi. Ürün sahibi "vadesi bugün olan alacak Vadesi Gelmemiş dilimindedir" kararını onayladı (bkz. financial-rules.md).
+- Doğrulama: 178/178 test, Pint temiz. Tarayıcıda bugünkü ve geçmiş tarihli rapor kontrol edildi.
+
+## Sprint 7: Nakit Akış Motoru (2026-11-16)
+
+- `CashflowService` eklendi: A–E yapısında dönem raporu, faaliyet ve kategori kırılımı, kredi anapara/faiz ayrımı, POS bloke köprüsü, hesap bazlı mutabakat, 6 mutabakat kontrolü. Günlük, haftalık ve aylık kırılımda her dönemin açılışı defterden bağımsız hesaplanıp önceki kapanışla karşılaştırılıyor.
+- Nakit Akış Raporu ekranı: günlük, haftalık, aylık ve özel dönem; önceki/sonraki dönem gezinmesi; kırılım tablosu; mutabakat tabloları; negatif net akış ve mutabakat hatası uyarıları.
+- Doğrulama: 188/188 test, Pint temiz. Ana test senaryosunun beklenen değerleri Python Decimal ile bağımsız olarak hesaplandı. Mutabakat hatasının yakalandığı, defter bakiyesini 1 kuruş bozan sahte servisle test edildi. Tarayıcıda geliştirme verisiyle (3 ay, aylık kırılım) tüm kontroller eşleşti.
+- Düzeltmeler: `match(...)->metod()` söz dizimi hatası (test yakaladı); kırılım tablosuna dönem içi açılış kaydı sütunu eklendi (tarayıcı kontrolünde satırın elle toplanamadığı görüldü).
+
+## Sprint 8: Dashboard ve Finansal Analiz (2026-11-17)
+
+- `ObligationService` (yaklaşan zorunlu ödemeler), `FinancialAnalysisService` (11 uyarı kuralı, 3 seviye, likidite karşılama oranı) ve `DashboardService` (10 kart, 4 grafik) eklendi.
+- Dashboard: kartlar ilgili ekranlara bağlı, uyarı paneli, Chart.js 4.4.1 (cdnjs, sürüm sabit) ile 4 grafik. Grafikler `GET /api/dashboard` adresinden besleniyor. Mutabakat hatası dashboard'da kırmızı bant olarak gösteriliyor.
+- Finansal Analiz ekranı: tüm uyarılar, seçilebilir ufukla likidite tablosu, bu ayın oranları.
+- Eşikler `config/finance.php` dosyasında, `.env` ile değiştirilebilir.
+- Doğrulama: 202/202 test, Pint temiz. Saat sabit bir tarihe ayarlanarak test edildi. Tarayıcıda dashboard (konsol hatası yok, 4 grafik çiziliyor) ve analiz ekranının mobil görünümü kontrol edildi.
+- Düzeltme: mobilde filtre etiketlerindeki select kutularının dikey uzaması giderildi.

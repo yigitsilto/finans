@@ -1,12 +1,18 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AgingController;
+use App\Http\Controllers\AnalysisController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\PartnerController;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PosController;
+use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -55,11 +61,25 @@ Route::middleware('auth')->group(function () {
         Route::get('/expenses/{expense}/edit', [ExpenseController::class, 'edit'])->name('expenses.edit');
         Route::put('/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
         Route::post('/expenses/{expense}/pay', [ExpenseController::class, 'pay'])->name('expenses.pay');
+
+        Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
+        Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
+        Route::get('/customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
+        Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+
+        Route::get('/receivables/create', [ReceivableController::class, 'create'])->name('receivables.create');
+        Route::post('/receivables', [ReceivableController::class, 'store'])->name('receivables.store');
+        Route::get('/receivables/{receivable}/edit', [ReceivableController::class, 'edit'])->name('receivables.edit');
+        Route::put('/receivables/{receivable}', [ReceivableController::class, 'update'])->name('receivables.update');
+        Route::post('/receivables/{receivable}/collect', [ReceivableController::class, 'collect'])->name('receivables.collect');
+        Route::post('/receivables/{receivable}/cancel', [ReceivableController::class, 'cancel'])->name('receivables.cancel');
     });
 
     // Görüntüleme (tüm aktif roller).
     Route::middleware('can:view-finance')->group(function () {
-        Route::view('/', 'dashboard')->name('dashboard');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/api/dashboard', [DashboardController::class, 'api'])->name('api.dashboard');
+        Route::get('/reports/analysis', [AnalysisController::class, 'index'])->name('analysis.index');
 
         Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
         Route::get('/accounts/{account}', [AccountController::class, 'show'])->name('accounts.show');
@@ -71,6 +91,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/loans', [LoanController::class, 'index'])->name('loans.index');
         Route::get('/loans/{loan}', [LoanController::class, 'show'])->name('loans.show');
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+        Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::get('/receivables', [ReceivableController::class, 'index'])->name('receivables.index');
+        Route::get('/receivables/{receivable}', [ReceivableController::class, 'show'])->name('receivables.show');
+        Route::get('/aging', [AgingController::class, 'index'])->name('aging.index');
+        Route::get('/reports/cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
     });
 
     Route::middleware('can:manage-users')->group(function () {

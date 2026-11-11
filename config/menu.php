@@ -32,15 +32,16 @@ return [
     [
         'title' => 'Alacak Yönetimi',
         'items' => [
-            ['label' => 'Müşteri Alacakları', 'route' => null, 'sprint' => 5],
-            ['label' => 'Yaşlandırma', 'route' => null, 'sprint' => 6],
+            ['label' => 'Müşteri Alacakları', 'route' => 'receivables.index', 'active' => 'receivables.*'],
+            ['label' => 'Müşteriler', 'route' => 'customers.index', 'active' => 'customers.*'],
+            ['label' => 'Yaşlandırma', 'route' => 'aging.index'],
         ],
     ],
     [
         'title' => 'Raporlar',
         'items' => [
-            ['label' => 'Nakit Akışı', 'route' => null, 'sprint' => 7],
-            ['label' => 'Finansal Analiz', 'route' => null, 'sprint' => 8],
+            ['label' => 'Nakit Akışı', 'route' => 'cashflow.index'],
+            ['label' => 'Finansal Analiz', 'route' => 'analysis.index'],
             ['label' => 'Excel / PDF', 'route' => null, 'sprint' => 9],
         ],
     ],

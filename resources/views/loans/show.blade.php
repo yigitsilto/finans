@@ -59,6 +59,8 @@
                                     <summary class="btn btn-sm">Öde</summary>
                                     <form method="POST" action="{{ route('loans.installments.pay', $inst) }}" class="stack-form">
                                         @csrf
+                                        <div class="modal-title">{{ $inst->number }}. taksit ödemesi</div>
+                                        <small class="muted">Anapara {{ Money::format($inst->principal) }} + faiz {{ Money::format($inst->interest) }} ayrı kaydedilir.</small>
                                         <label>Ödeme tarihi <input type="date" name="date" class="input input-sm" value="{{ min(today(), $inst->due_date)->toDateString() }}" max="{{ today()->toDateString() }}" required></label>
                                         <label>Hesap
                                             <select name="account_id" class="input-sm" required>
@@ -76,8 +78,10 @@
                             @elseif ($isLastPaid)
                                 <details class="inline-details">
                                     <summary class="btn btn-secondary btn-sm">Ödemeyi iptal et</summary>
-                                    <form method="POST" action="{{ route('loans.installments.reverse', $inst) }}" class="stack-form" onsubmit="return confirm('Taksit ödemesi (anapara + faiz) iptal edilecek.')">
+                                    <form method="POST" action="{{ route('loans.installments.reverse', $inst) }}" class="stack-form">
                                         @csrf
+                                        <div class="modal-title">{{ $inst->number }}. taksit ödemesini iptal et</div>
+                                        <small class="muted">Anapara ve faiz kayıtları birlikte ters kayıtla iptal edilir.</small>
                                         <label>İptal tarihi <input type="date" name="date" class="input input-sm" value="{{ today()->toDateString() }}" max="{{ today()->toDateString() }}" required></label>
                                         <label>Neden <input name="reason" class="input input-sm" required minlength="3"></label>
                                         <button class="btn btn-danger btn-sm">İptal et</button>

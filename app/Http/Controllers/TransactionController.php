@@ -107,7 +107,7 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction): View
     {
-        $transaction->load(['category.parent', 'fromAccount', 'toAccount', 'creator', 'reversal', 'reversalOf', 'settles', 'activeSettlement', 'partner', 'loan', 'recurringExpense']);
+        $transaction->load(['category.parent', 'fromAccount', 'toAccount', 'creator', 'reversal', 'reversalOf', 'settles', 'activeSettlement', 'partner', 'loan', 'recurringExpense', 'receivable']);
 
         return view('transactions.show', [
             'transaction' => $transaction,

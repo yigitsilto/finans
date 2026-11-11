@@ -68,6 +68,11 @@ class Transaction extends Model
         return $this->belongsTo(RecurringExpense::class);
     }
 
+    public function receivable(): BelongsTo
+    {
+        return $this->belongsTo(Receivable::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

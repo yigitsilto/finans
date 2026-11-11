@@ -27,10 +27,10 @@ class TransactionService
 
     private const AUDIT_FIELDS = ['type', 'date', 'amount', 'currency', 'from_account_id', 'to_account_id', 'category_id',
         'counterparty', 'reference_no', 'description', 'pos_settlement_date', 'settles_transaction_id', 'reversal_of_id',
-        'partner_id', 'loan_id', 'loan_installment_id', 'recurring_expense_id', 'expense_period'];
+        'partner_id', 'loan_id', 'loan_installment_id', 'recurring_expense_id', 'expense_period', 'receivable_id'];
 
     /** Yalnızca sistem servislerinin (LoanService, ExpenseService) verebileceği bağlantılar. */
-    private const INTERNAL_LINKS = ['loan_id', 'loan_installment_id', 'recurring_expense_id', 'expense_period'];
+    private const INTERNAL_LINKS = ['loan_id', 'loan_installment_id', 'recurring_expense_id', 'expense_period', 'receivable_id'];
 
     public function __construct(
         private readonly BalanceService $balances,
@@ -82,6 +82,7 @@ class TransactionService
                 'loan_installment_id' => $links['loan_installment_id'] ?? null,
                 'recurring_expense_id' => $links['recurring_expense_id'] ?? null,
                 'expense_period' => $links['expense_period'] ?? null,
+                'receivable_id' => $links['receivable_id'] ?? null,
                 'created_by' => $user->id,
             ]);
 
@@ -111,7 +112,7 @@ class TransactionService
 
             if (array_key_exists('category_id', $changes)) {
                 $newCategory = $this->resolveCategory($transaction->type, $changes['category_id']);
-                $linked = $transaction->partner_id || $transaction->loan_id || $transaction->recurring_expense_id;
+                $linked = $transaction->partner_id || $transaction->loan_id || $transaction->recurring_expense_id || $transaction->receivable_id;
                 if ($newCategory->id !== $transaction->category_id && ($linked || $newCategory->link_type !== null)) {
                     throw ValidationException::withMessages(['category_id' => 'Ortak, kredi veya tekrarlayan gidere bağlı hareketlerin kategorisi değiştirilemez; iptal edip yeniden girin.']);
                 }
@@ -180,6 +181,7 @@ class TransactionService
                 'loan_installment_id' => $original->loan_installment_id,
                 'recurring_expense_id' => $original->recurring_expense_id,
                 'expense_period' => $original->expense_period,
+                'receivable_id' => $original->receivable_id,
                 'reversal_of_id' => $original->id,
                 'created_by' => $user->id,
             ]);

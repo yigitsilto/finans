@@ -22,13 +22,14 @@ class LayoutTest extends TestCase
             ->assertSee('Denetim Kayıtları');
     }
 
-    public function test_dashboard_shows_no_fake_financial_figures(): void
+    public function test_empty_dashboard_shows_only_real_zero_values(): void
     {
         $this->actingAs(User::factory()->viewer()->create())
             ->get('/')
             ->assertOk()
-            ->assertSee('Henüz finansal veri yok')
-            ->assertDontSee('₺')
-            ->assertDontSee(' TL');
+            ->assertSee('Henüz hesap tanımlı değil')
+            ->assertSee('0,00 ₺')
+            ->assertDontSeeText('27.000')
+            ->assertDontSeeText('1.700');
     }
 }
