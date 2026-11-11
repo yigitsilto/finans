@@ -2,14 +2,15 @@
 
 /*
 | Ana menü. 'route' => null olan öğeler henüz geliştirilmedi ve pasif görünür.
-| 'roles' Sprint 2'de menü filtrelemesi için kullanılacak (backend yetkisi ayrıca kontrol edilir).
+| 'can' verilen öğeler yalnızca o yetkiye sahip kullanıcıya gösterilir.
+| Menü gizleme güvenlik değildir; asıl kontrol route'lardaki `can:` middleware'idir.
 */
 
 return [
     [
         'title' => null,
         'items' => [
-            ['label' => 'Dashboard', 'route' => 'dashboard', 'roles' => ['admin', 'finance', 'viewer']],
+            ['label' => 'Dashboard', 'route' => 'dashboard'],
         ],
     ],
     [
@@ -42,8 +43,8 @@ return [
     [
         'title' => 'Yönetim',
         'items' => [
-            ['label' => 'Kullanıcılar', 'route' => null, 'sprint' => 2, 'roles' => ['admin']],
-            ['label' => 'Denetim Kayıtları', 'route' => null, 'sprint' => 9, 'roles' => ['admin']],
+            ['label' => 'Kullanıcılar', 'route' => 'users.index', 'can' => 'manage-users'],
+            ['label' => 'Denetim Kayıtları', 'route' => null, 'sprint' => 9, 'can' => 'view-audit'],
         ],
     ],
 ];

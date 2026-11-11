@@ -20,11 +20,15 @@
         </div>
         <nav>
             @foreach (config('menu') as $group)
+                @php
+                    $items = array_filter($group['items'], fn ($item) => ! isset($item['can']) || Gate::allows($item['can']));
+                @endphp
+                @continue(empty($items))
                 @if ($group['title'])
                     <div class="nav-title">{{ $group['title'] }}</div>
                 @endif
                 <ul>
-                    @foreach ($group['items'] as $item)
+                    @foreach ($items as $item)
                         <li>
                             @if ($item['route'])
                                 <a href="{{ route($item['route']) }}"
@@ -45,6 +49,18 @@
         <header class="topbar">
             <label for="nav-toggle" class="nav-button" aria-label="Menüyü aç/kapat">☰</label>
             <h1>@yield('title', 'Dashboard')</h1>
+            @auth
+                <div class="user-box">
+                    <span>
+                        <strong>{{ auth()->user()->name }}</strong>
+                        <small>{{ auth()->user()->role->label() }}</small>
+                    </span>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-secondary btn-sm">Çıkış</button>
+                    </form>
+                </div>
+            @endauth
         </header>
 
         <main class="content">

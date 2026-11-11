@@ -21,6 +21,26 @@ docker compose exec app php artisan key:generate
 
 Container açılırken migration'lar otomatik çalışır (`RUN_MIGRATIONS=false` ile kapatılabilir).
 
+## Kullanıcılar
+
+İlk Admin kullanıcısını oluştur (parola gizli olarak sorulur):
+
+```bash
+docker compose exec app php artisan finans:create-admin admin --name="Ad Soyad"
+```
+
+Sadece geliştirme ortamında: `admin`, `finans` ve `izleyici` örnek kullanıcıları `.env` içindeki `DEV_SEED_PASSWORD` parolasıyla oluşturulur.
+
+```bash
+docker compose exec app php artisan db:seed
+```
+
+| Rol | Yetki |
+|---|---|
+| Admin | Her şey: kullanıcı yönetimi ve denetim kayıtları dahil |
+| Finance | Finansal kayıt girme ve düzenleme, raporlar |
+| Viewer | Yalnızca görüntüleme ve rapor indirme |
+
 ## Testler
 
 Testler SQLite'ta değil, gerçek PostgreSQL'de, `finans_test` veritabanında koşar. Bu veritabanı container ilk açıldığında otomatik oluşturulur.
