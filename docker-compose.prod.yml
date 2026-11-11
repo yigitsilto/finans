@@ -1,0 +1,15 @@
+# Production override: kod imaja gömülüdür, host mount edilmez, DB dışarı açılmaz.
+services:
+  app:
+    volumes: !reset []
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_HOST: db
+    restart: always
+
+  db:
+    ports: !reset []
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always

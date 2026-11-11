@@ -1,0 +1,41 @@
+# Geliştirme ortamı: docker compose up -d
+# Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  app:
+    build: .
+    container_name: finans-app
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: finans-db
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-finans}
+      POSTGRES_USER: ${DB_USERNAME:-finans}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD .env içinde tanımlanmalı}
+      TZ: Europe/Istanbul
+    ports:
+      - "127.0.0.1:${DB_FORWARD_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sh:/docker-entrypoint-initdb.d/10-test-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-finans} -d ${DB_DATABASE:-finans}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
