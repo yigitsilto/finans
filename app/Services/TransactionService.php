@@ -6,6 +6,7 @@ use App\Enums\AccountType;
 use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Partner;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
@@ -25,7 +26,11 @@ class TransactionService
     public const EDITABLE = ['category_id', 'counterparty', 'reference_no', 'description'];
 
     private const AUDIT_FIELDS = ['type', 'date', 'amount', 'currency', 'from_account_id', 'to_account_id', 'category_id',
-        'counterparty', 'reference_no', 'description', 'pos_settlement_date', 'settles_transaction_id', 'reversal_of_id'];
+        'counterparty', 'reference_no', 'description', 'pos_settlement_date', 'settles_transaction_id', 'reversal_of_id',
+        'partner_id', 'loan_id', 'loan_installment_id', 'recurring_expense_id', 'expense_period'];
+
+    /** Yalnızca sistem servislerinin (LoanService, ExpenseService) verebileceği bağlantılar. */
+    private const INTERNAL_LINKS = ['loan_id', 'loan_installment_id', 'recurring_expense_id', 'expense_period'];
 
     public function __construct(
         private readonly BalanceService $balances,
@@ -35,21 +40,25 @@ class TransactionService
     /**
      * @param  array{type: string, date: string, amount: string, from_account_id?: int|null, to_account_id?: int|null,
      *     category_id?: int|null, counterparty?: string|null, reference_no?: string|null, description?: string|null,
-     *     pos_settlement_date?: string|null}  $data
+     *     pos_settlement_date?: string|null, partner_id?: int|null}  $data
+     * @param  array<string, mixed>  $links  Sistem bağlantıları (kredi/taksit/gider dönemi); kullanıcı girdisinden alınmaz.
      */
-    public function create(array $data, User $user): Transaction
+    public function create(array $data, User $user, array $links = []): Transaction
     {
+        $links = array_intersect_key($links, array_flip(self::INTERNAL_LINKS));
         $type = TransactionType::from($data['type']);
         $date = CarbonImmutable::parse($data['date'])->startOfDay();
         $amount = $this->parseAmount($data['amount']);
 
         $this->assertNotFuture($date);
 
-        return DB::transaction(function () use ($data, $type, $date, $amount, $user) {
+        return DB::transaction(function () use ($data, $type, $date, $amount, $user, $links) {
             [$from, $to] = $this->lockAccounts($data['from_account_id'] ?? null, $data['to_account_id'] ?? null);
 
             $this->assertAccountsForType($type, $from, $to);
             $category = $this->resolveCategory($type, $data['category_id'] ?? null);
+            $partnerId = $this->resolvePartnerLink($category, $data['partner_id'] ?? null);
+            $this->assertLoanLink($category, $links);
             $posDate = $this->resolvePosSettlementDate($type, $to, $date, $data['pos_settlement_date'] ?? null);
 
             if ($type === TransactionType::Opening) {
@@ -68,6 +77,11 @@ class TransactionService
                 'reference_no' => $data['reference_no'] ?? null,
                 'description' => $data['description'] ?? null,
                 'pos_settlement_date' => $posDate,
+                'partner_id' => $partnerId,
+                'loan_id' => $links['loan_id'] ?? null,
+                'loan_installment_id' => $links['loan_installment_id'] ?? null,
+                'recurring_expense_id' => $links['recurring_expense_id'] ?? null,
+                'expense_period' => $links['expense_period'] ?? null,
                 'created_by' => $user->id,
             ]);
 
@@ -96,7 +110,12 @@ class TransactionService
             $changes = array_intersect_key($data, array_flip(self::EDITABLE));
 
             if (array_key_exists('category_id', $changes)) {
-                $changes['category_id'] = $this->resolveCategory($transaction->type, $changes['category_id'])?->id;
+                $newCategory = $this->resolveCategory($transaction->type, $changes['category_id']);
+                $linked = $transaction->partner_id || $transaction->loan_id || $transaction->recurring_expense_id;
+                if ($newCategory->id !== $transaction->category_id && ($linked || $newCategory->link_type !== null)) {
+                    throw ValidationException::withMessages(['category_id' => 'Ortak, kredi veya tekrarlayan gidere bağlı hareketlerin kategorisi değiştirilemez; iptal edip yeniden girin.']);
+                }
+                $changes['category_id'] = $newCategory->id;
             }
 
             $original = $transaction->getOriginal();
@@ -117,10 +136,14 @@ class TransactionService
     /**
      * Hareketi negatif tutarlı ters kayıtla iptal eder. Orijinal kayıt değişmez.
      */
-    public function reverse(Transaction $transaction, string $date, string $reason, User $user): Transaction
+    public function reverse(Transaction $transaction, string $date, string $reason, User $user, bool $allowLinked = false): Transaction
     {
         $date = CarbonImmutable::parse($date)->startOfDay();
         $this->assertNotFuture($date);
+
+        if (! $allowLinked && $transaction->loan_id) {
+            throw ValidationException::withMessages(['transaction' => 'Kredi hareketleri yalnızca Krediler ekranından iptal edilebilir.']);
+        }
 
         return DB::transaction(function () use ($transaction, $date, $reason, $user) {
             /** @var Transaction $original */
@@ -151,6 +174,12 @@ class TransactionService
                 'counterparty' => $original->counterparty,
                 'reference_no' => $original->reference_no,
                 'description' => "İptal (#{$original->id}): {$reason}",
+                // Bağlantılar kopyalanır: ortak/kredi/gider toplamları SUM(amount) ile doğru kalır.
+                'partner_id' => $original->partner_id,
+                'loan_id' => $original->loan_id,
+                'loan_installment_id' => $original->loan_installment_id,
+                'recurring_expense_id' => $original->recurring_expense_id,
+                'expense_period' => $original->expense_period,
                 'reversal_of_id' => $original->id,
                 'created_by' => $user->id,
             ]);
@@ -349,6 +378,37 @@ class TransactionService
         }
 
         return $category;
+    }
+
+    private function resolvePartnerLink(?Category $category, mixed $partnerId): ?int
+    {
+        if ($category?->link_type !== 'partner') {
+            if ($partnerId) {
+                throw ValidationException::withMessages(['partner_id' => 'Ortak yalnızca ortak kategorilerindeki hareketlerde seçilir.']);
+            }
+
+            return null;
+        }
+
+        $partner = $partnerId ? Partner::active()->find($partnerId) : null;
+        if (! $partner) {
+            throw ValidationException::withMessages(['partner_id' => 'Bu kategori için aktif bir ortak seçilmelidir.']);
+        }
+
+        return $partner->id;
+    }
+
+    /** @param array<string, mixed> $links */
+    private function assertLoanLink(?Category $category, array $links): void
+    {
+        $isLoanCategory = $category?->link_type === 'loan';
+
+        if ($isLoanCategory && empty($links['loan_id'])) {
+            throw ValidationException::withMessages(['category_id' => 'Kredi kullanımı ve taksit ödemeleri Krediler ekranından yapılır.']);
+        }
+        if (! $isLoanCategory && ! empty($links['loan_id'])) {
+            throw ValidationException::withMessages(['category_id' => 'Krediye bağlı hareket kredi kategorisinde olmalıdır.']);
+        }
     }
 
     private function resolvePosSettlementDate(TransactionType $type, ?Account $to, CarbonImmutable $date, ?string $posDate): ?CarbonImmutable

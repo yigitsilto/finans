@@ -23,9 +23,10 @@ return [
             ['label' => 'Nakit Çıkışları', 'route' => 'transactions.index', 'params' => ['type' => 'outflow'], 'active' => 'transactions.*'],
             ['label' => 'Banka ve Kasa', 'route' => 'accounts.index', 'params' => ['type' => 'available']],
             ['label' => 'POS / Blokeli Hesaplar', 'route' => 'pos.index'],
+            ['label' => 'Giderler', 'route' => 'expenses.index', 'active' => 'expenses.*'],
             ['label' => 'Tüm Hareketler', 'route' => 'transactions.index', 'active' => 'transactions.*'],
-            ['label' => 'Ortaklar Cari', 'route' => null, 'sprint' => 4],
-            ['label' => 'Krediler', 'route' => null, 'sprint' => 4],
+            ['label' => 'Ortaklar Cari', 'route' => 'partners.index', 'active' => 'partners.*'],
+            ['label' => 'Krediler', 'route' => 'loans.index', 'active' => 'loans.*'],
         ],
     ],
     [

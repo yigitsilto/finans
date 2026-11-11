@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\LoanController;
+use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PosController;
@@ -33,6 +36,25 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/pos/settle-due', [PosController::class, 'settleDue'])->name('pos.settle-due');
         Route::post('/pos/{transaction}/settle', [PosController::class, 'settle'])->name('pos.settle');
+
+        Route::get('/partners/create', [PartnerController::class, 'create'])->name('partners.create');
+        Route::post('/partners', [PartnerController::class, 'store'])->name('partners.store');
+        Route::get('/partners/{partner}/edit', [PartnerController::class, 'edit'])->name('partners.edit');
+        Route::put('/partners/{partner}', [PartnerController::class, 'update'])->name('partners.update');
+        Route::post('/partners/{partner}/adjustments', [PartnerController::class, 'storeAdjustment'])->name('partners.adjustments.store');
+        Route::post('/partner-adjustments/{adjustment}/reverse', [PartnerController::class, 'reverseAdjustment'])->name('partners.adjustments.reverse');
+
+        Route::get('/loans/create', [LoanController::class, 'create'])->name('loans.create');
+        Route::post('/loans', [LoanController::class, 'store'])->name('loans.store');
+        Route::post('/loan-installments/{installment}/pay', [LoanController::class, 'pay'])->name('loans.installments.pay');
+        Route::post('/loan-installments/{installment}/reverse', [LoanController::class, 'reversePayment'])->name('loans.installments.reverse');
+        Route::patch('/loan-installments/{installment}', [LoanController::class, 'updateInstallment'])->name('loans.installments.update');
+
+        Route::get('/expenses/create', [ExpenseController::class, 'create'])->name('expenses.create');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::get('/expenses/{expense}/edit', [ExpenseController::class, 'edit'])->name('expenses.edit');
+        Route::put('/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::post('/expenses/{expense}/pay', [ExpenseController::class, 'pay'])->name('expenses.pay');
     });
 
     // Görüntüleme (tüm aktif roller).
@@ -44,6 +66,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
         Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->name('transactions.show');
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
+        Route::get('/partners', [PartnerController::class, 'index'])->name('partners.index');
+        Route::get('/partners/{partner}', [PartnerController::class, 'show'])->name('partners.show');
+        Route::get('/loans', [LoanController::class, 'index'])->name('loans.index');
+        Route::get('/loans/{loan}', [LoanController::class, 'show'])->name('loans.show');
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
     });
 
     Route::middleware('can:manage-users')->group(function () {

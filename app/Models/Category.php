@@ -52,7 +52,8 @@ class Category extends Model
      */
     public static function groupedOptions(string $direction): Collection
     {
-        return self::selectable($direction)->with('parent')->orderBy('sort')->get()
+        // Kredi kategorileri yalnızca Krediler ekranından (taksit ödemesi/kullandırım) kullanılır.
+        return self::selectable($direction)->where(fn ($q) => $q->whereNull('link_type')->orWhere('link_type', '!=', 'loan'))->with('parent')->orderBy('sort')->get()
             ->sortBy(fn ($c) => [$c->parent?->sort ?? $c->sort, $c->parent ? $c->sort : 0])
             ->groupBy(fn ($c) => $c->parent?->name ?? 'Genel')
             ->map(fn ($items) => $items->pluck('name', 'id')->all());

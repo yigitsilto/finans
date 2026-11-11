@@ -7,6 +7,7 @@ use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\AuditLog;
 use App\Models\Category;
+use App\Models\Partner;
 use App\Models\Transaction;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,7 @@ class TransactionController extends Controller
         $type = isset($filters['type']) ? TransactionType::from($filters['type']) : null;
 
         $query = Transaction::query()
-            ->with(['category.parent', 'fromAccount', 'toAccount', 'reversal'])
+            ->with(['category.parent', 'fromAccount', 'toAccount', 'reversal', 'partner'])
             ->when($type, fn ($q) => $q->where('type', $type))
             ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('date', '>=', $d))
             ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('date', '<=', $d))
@@ -94,6 +95,7 @@ class TransactionController extends Controller
             'reference_no' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:1000'],
             'pos_settlement_date' => ['nullable', 'date'],
+            'partner_id' => ['nullable', 'integer'],
         ], [], $this->attributes());
 
         $transaction = $this->service->create($data, $request->user());
@@ -105,7 +107,7 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction): View
     {
-        $transaction->load(['category.parent', 'fromAccount', 'toAccount', 'creator', 'reversal', 'reversalOf', 'settles', 'activeSettlement']);
+        $transaction->load(['category.parent', 'fromAccount', 'toAccount', 'creator', 'reversal', 'reversalOf', 'settles', 'activeSettlement', 'partner', 'loan', 'recurringExpense']);
 
         return view('transactions.show', [
             'transaction' => $transaction,
@@ -167,6 +169,7 @@ class TransactionController extends Controller
             'toAccounts' => $accounts->filter(fn ($a) => $type === TransactionType::Inflow || $type === TransactionType::Opening || $a->type !== AccountType::Pos)
                 ->mapWithKeys(fn ($a) => [$a->id => $a->displayName().' · '.$a->type->label()]),
             'posAccountIds' => $accounts->where('type', AccountType::Pos)->pluck('id')->values(),
+            'partners' => Partner::active()->orderBy('name')->pluck('name', 'id'),
         ];
     }
 
@@ -176,7 +179,7 @@ class TransactionController extends Controller
         return [
             'type' => 'İşlem türü', 'date' => 'Tarih', 'amount' => 'Tutar', 'from_account_id' => 'Kaynak hesap',
             'to_account_id' => 'Hedef hesap', 'category_id' => 'Kategori', 'counterparty' => 'İlgili kişi/kurum',
-            'reference_no' => 'Belge/referans no', 'description' => 'Açıklama', 'pos_settlement_date' => 'Valör tarihi',
+            'reference_no' => 'Belge/referans no', 'description' => 'Açıklama', 'pos_settlement_date' => 'Valör tarihi', 'partner_id' => 'Ortak',
         ];
     }
 }

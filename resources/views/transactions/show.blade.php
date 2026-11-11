@@ -3,7 +3,7 @@
 @php
     use App\Support\Money;
     $t = $transaction;
-    $canReverse = ! $t->isReversal() && ! $t->reversal && ! $t->activeSettlement;
+    $canReverse = ! $t->isReversal() && ! $t->reversal && ! $t->activeSettlement && ! $t->loan_id;
 @endphp
 
 @section('title', "Hareket #{$t->id}")
@@ -43,6 +43,15 @@
                 @if ($t->settles)
                     <dt>Aktarılan POS girişi</dt><dd><a href="{{ route('transactions.show', $t->settles) }}">#{{ $t->settles->id }}</a></dd>
                 @endif
+                @if ($t->partner)
+                    <dt>Ortak</dt><dd><a href="{{ route('partners.show', $t->partner) }}">{{ $t->partner->name }}</a></dd>
+                @endif
+                @if ($t->loan)
+                    <dt>Kredi</dt><dd><a href="{{ route('loans.show', $t->loan) }}">{{ $t->loan->name }}</a></dd>
+                @endif
+                @if ($t->recurringExpense)
+                    <dt>Tekrarlayan gider</dt><dd>{{ $t->recurringExpense->name }} · {{ $t->expense_period->locale('tr')->translatedFormat('F Y') }}</dd>
+                @endif
                 <dt>İlgili</dt><dd>{{ $t->counterparty ?? '—' }}</dd>
                 <dt>Referans</dt><dd>{{ $t->reference_no ?? '—' }}</dd>
                 <dt>Açıklama</dt><dd>{{ $t->description ?? '—' }}</dd>
@@ -76,6 +85,10 @@
                         </div>
                         <button class="btn btn-danger">Ters kayıt oluştur</button>
                     </form>
+                </div>
+            @elseif ($t->loan_id && ! $t->isReversal() && ! $t->reversal)
+                <div class="card">
+                    <p class="muted">Kredi hareketleri <a href="{{ route('loans.show', $t->loan) }}">kredi ekranından</a> taksit bazında iptal edilir (anapara ve faiz birlikte).</p>
                 </div>
             @elseif ($t->activeSettlement)
                 <div class="card">

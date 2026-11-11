@@ -23,6 +23,7 @@ class Transaction extends Model
             'type' => TransactionType::class,
             'date' => 'date',
             'pos_settlement_date' => 'date',
+            'expense_period' => 'date',
             'amount' => 'decimal:2',
         ];
     }
@@ -45,6 +46,26 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function partner(): BelongsTo
+    {
+        return $this->belongsTo(Partner::class);
+    }
+
+    public function loan(): BelongsTo
+    {
+        return $this->belongsTo(Loan::class);
+    }
+
+    public function loanInstallment(): BelongsTo
+    {
+        return $this->belongsTo(LoanInstallment::class);
+    }
+
+    public function recurringExpense(): BelongsTo
+    {
+        return $this->belongsTo(RecurringExpense::class);
     }
 
     public function creator(): BelongsTo

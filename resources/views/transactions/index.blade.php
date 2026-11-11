@@ -80,7 +80,7 @@
                         @if ($t->toAccount) {{ $t->toAccount->name }} @endif
                     </td>
                     <td>
-                        @if ($t->counterparty) <strong>{{ $t->counterparty }}</strong> @endif
+                        @if ($t->partner) <strong>{{ $t->partner->name }}</strong> @elseif ($t->counterparty) <strong>{{ $t->counterparty }}</strong> @endif
                         <span class="muted">{{ Str::limit($t->description, 60) }}</span>
                         @if ($t->isReversal()) <span class="badge badge-danger">Ters kayıt</span>
                         @elseif ($t->reversal) <span class="badge badge-muted">İptal edildi</span> @endif

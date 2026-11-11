@@ -87,6 +87,18 @@
                     </div>
                 @endif
 
+                @if ($hasCategory && ! $editing)
+                    <div class="form-row">
+                        <label for="partner_id">Ortak <span class="muted">(yalnızca ortak kategorilerinde)</span></label>
+                        <select id="partner_id" name="partner_id">
+                            <option value="">—</option>
+                            @foreach ($partners as $id => $name)
+                                <option value="{{ $id }}" @selected((string) old('partner_id', $transaction->partner_id) === (string) $id)>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
                 @if ($type !== TransactionType::Opening)
                     <div class="form-row">
                         <label for="counterparty">İlgili müşteri / sigorta şirketi / ortak</label>
