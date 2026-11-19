@@ -28,6 +28,8 @@
             </select>
         </label>
         <button class="btn btn-secondary">Göster</button>
+        <a class="btn btn-secondary" href="{{ route('exports.download', ['report' => 'aging', 'format' => 'xlsx', 'date' => $report['date']->toDateString(), 'customer_id' => $filters['customer_id'] ?? null]) }}">Excel</a>
+        <a class="btn btn-secondary" href="{{ route('exports.download', ['report' => 'aging', 'format' => 'pdf', 'date' => $report['date']->toDateString(), 'customer_id' => $filters['customer_id'] ?? null]) }}">PDF</a>
     </form>
 
     @unless ($isToday)

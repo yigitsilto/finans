@@ -15,6 +15,8 @@
             <a class="btn btn-secondary" href="{{ route('expenses.index', ['month' => $period->subMonth()->format('Y-m')]) }}" aria-label="Önceki ay">‹</a>
             <input type="month" name="month" class="input" value="{{ $period->format('Y-m') }}" onchange="this.form.submit()">
             <a class="btn btn-secondary" href="{{ route('expenses.index', ['month' => $period->addMonth()->format('Y-m')]) }}" aria-label="Sonraki ay">›</a>
+            <a class="btn btn-secondary" href="{{ route('exports.download', ['report' => 'expenses', 'format' => 'xlsx', 'from' => $period->startOfMonth()->toDateString(), 'to' => $period->endOfMonth()->toDateString()]) }}">Excel</a>
+            <a class="btn btn-secondary" href="{{ route('exports.download', ['report' => 'expenses', 'format' => 'pdf', 'from' => $period->startOfMonth()->toDateString(), 'to' => $period->endOfMonth()->toDateString()]) }}">PDF</a>
         </form>
         @can('write-finance')
             <div class="actions">

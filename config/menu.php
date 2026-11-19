@@ -42,14 +42,14 @@ return [
         'items' => [
             ['label' => 'Nakit Akışı', 'route' => 'cashflow.index'],
             ['label' => 'Finansal Analiz', 'route' => 'analysis.index'],
-            ['label' => 'Excel / PDF', 'route' => null, 'sprint' => 9],
+            ['label' => 'Excel / PDF', 'route' => 'exports.index'],
         ],
     ],
     [
         'title' => 'Yönetim',
         'items' => [
             ['label' => 'Kullanıcılar', 'route' => 'users.index', 'can' => 'manage-users'],
-            ['label' => 'Denetim Kayıtları', 'route' => null, 'sprint' => 9, 'can' => 'view-audit'],
+            ['label' => 'Denetim Kayıtları', 'route' => 'audit.index', 'active' => 'audit.*', 'can' => 'view-audit'],
         ],
     ],
 ];

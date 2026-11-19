@@ -167,3 +167,17 @@ Herhangi bir kontrol tutmazsa raporda kırmızı "Mutabakat hatası" uyarısı �
 | Blokeli POS | Bankaya aktarılmayı bekleyen POS tutarı var | Bilgi |
 
 - Eşikler `config/finance.php` içinde tanımlıdır ve `.env` ile değiştirilebilir (`FINANCE_LIQUIDITY_HORIZON_DAYS`, `FINANCE_LIQUIDITY_WARNING_PERCENT`, `FINANCE_FIXED_EXPENSE_WARNING_PERCENT`). Finansal Analiz ekranında likidite ufku 7, 15, 30, 60 veya 90 gün seçilebilir.
+
+## Denetim kayıtları ve raporlar (PRD §20–21)
+
+- Denetim kayıtları ekranı yalnızca **Admin** içindir. Finans ve Görüntüleyici kullanıcılar 403 alır. Ekranda kullanıcı, işlem, kaynak, tarih aralığı ve metin filtreleri var; detayda eski ve yeni değer özetleri gösterilir. Kayıtlar değiştirilemez ve silinemez.
+- Denetime yazılan işlemler: giriş, başarısız giriş, çıkış, oluşturma, güncelleme, iptal/ters kayıt, kullanıcı oluşturma, pasife alma, rol değişikliği, parola değişikliği ve **her rapor indirme** (rapor, biçim, satır sayısı, filtreler).
+- Dışa aktarılan raporlar: nakit akışı, alacak yaşlandırma, finansal hareket listesi, gider analizi, denetim kayıtları (yalnızca Admin). Finansal raporları Görüntüleyici dahil tüm aktif roller indirebilir.
+- Excel ve PDF aynı rapor tanımından (`ReportTable`) üretilir; ekranla aynı servisleri kullanır, bu yüzden üçü de aynı rakamları gösterir.
+- **Excel:** şirket başlığı, rapor adı, dönem, oluşturulma tarihi ve kullanıcı, filtreler, özet, tablolar, toplam satırları. Tutarlar sayısal hücre + `#,##0.00 "₺"` biçiminde (Türkçe Excel'de 1.234,56 ₺ görünür), tarihler gerçek tarih hücresidir. Sütun genişlikleri otomatik ayarlanır ve otomatik filtre eklenir. Not: xlsx sayıları IEEE double olarak saklar; 2 basamaklı tutarlar 15 anlamlı basamağa kadar birebir gösterilir.
+- **PDF:** DejaVu Sans gömülür (Türkçe karakterler ve ₺); yalnızca kullanılan karakterler gömüldüğü için dosya küçüktür. Geniş tablolar yatay sayfaya basılır.
+- **Sınırlar** (128 MB'lık varsayılan PHP belleğinde ölçüldü):
+  - PDF en fazla 500 satır içerir (dompdf yaklaşık 0,4 MB/satır bellek kullanır). Daha büyük listelerde ilk 500 satır basılır ve bu durum belgede yazılır; tamamı için Excel kullanılır.
+  - Excel listeleri en fazla 20.000 satır içerir (≈175 MB, 5 sn). Fazlasında kullanıcıdan tarih aralığını daraltması istenir.
+  - Dışa aktarma isteklerinde bellek sınırı yalnızca o istek için 512 MB'a çıkarılır. Uygulamanın genel sınırı `docker/php.ini` dosyasında 256 MB'tır.
+- İndirme adresi dakikada 30 istekle sınırlıdır.

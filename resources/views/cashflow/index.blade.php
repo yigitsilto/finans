@@ -44,6 +44,10 @@
 
     <div class="toolbar">
         <h2 class="section-title no-margin">{{ CashflowController::MODES[$mode] }} · {{ $periodLabel }}</h2>
+        <div class="actions">
+            <a class="btn btn-secondary btn-sm" href="{{ route('exports.download', ['report' => 'cashflow', 'format' => 'xlsx', 'from' => $r['from']->toDateString(), 'to' => $r['to']->toDateString()]) }}">Excel</a>
+            <a class="btn btn-secondary btn-sm" href="{{ route('exports.download', ['report' => 'cashflow', 'format' => 'pdf', 'from' => $r['from']->toDateString(), 'to' => $r['to']->toDateString()]) }}">PDF</a>
+        </div>
         @if ($prev)
             <div class="actions">
                 <a class="btn btn-secondary btn-sm" href="{{ request()->fullUrlWithQuery(['date' => $prev]) }}">‹ Önceki</a>

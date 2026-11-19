@@ -74,3 +74,25 @@
 - Eşikler `config/finance.php` dosyasında, `.env` ile değiştirilebilir.
 - Doğrulama: 202/202 test, Pint temiz. Saat sabit bir tarihe ayarlanarak test edildi. Tarayıcıda dashboard (konsol hatası yok, 4 grafik çiziliyor) ve analiz ekranının mobil görünümü kontrol edildi.
 - Düzeltme: mobilde filtre etiketlerindeki select kutularının dikey uzaması giderildi.
+
+## Sprint 9: Denetim ve Raporlama (2026-11-18)
+
+- Denetim kayıtları ekranı (yalnızca Admin): filtreler, sayfalama, kayıt detayı.
+- `ReportTable`, `ReportBuilder` (5 rapor), `ExcelRenderer` (PhpSpreadsheet) ve `PdfRenderer` (dompdf + DejaVu Sans) eklendi. "Excel / PDF" ekranı ve rapor ekranlarına indirme butonları eklendi. Her indirme denetim kaydına yazılıyor.
+- Hareket listesi filtresi `TransactionController::filteredQuery` olarak ayrıldı; ekran ve dışa aktarma aynı filtreyi kullanıyor.
+- `docker/php.ini` eklendi (memory 256M, expose_php Off, display_errors Off). PHP gereksinimi `composer.json` dosyasında açıkça ^8.3 yapıldı; yeni paketler PHP 8.3 istiyor ve uygulamanın çalışma ortamı zaten PHP 8.3'lü Docker.
+- Testlerin bulduğu sorunlar:
+  - **Bellek:** Excel'de hücre başına stil uygulandığı için 5.000 satır 128 MB'ı aşıyordu. Biçimler sütun aralığına tek seferde uygulanacak şekilde düzeltildi; 5.000 satır artık 77 MB.
+  - **Bellek:** dompdf 2.000 satırlık PDF'te belleği aşıyordu. Ölçüldü (≈0,4 MB/satır); PDF sınırı 500 satıra indirildi ve PDF üretimi sırasında bellek geçici olarak yükseltiliyor.
+  - **Kurulum:** `masterminds/html5` paketi mount edilmiş klasöre eksik kurulmuştu; yeniden kuruldu.
+  - Test hataları: PhpSpreadsheet'in hücre nesnesini yeniden kullanması ve jsonb'nin anahtar sırasını korumaması.
+- PDF iyileştirmeleri: yalnızca kullanılan karakterlerin gömülmesi (1,2 MB → 37 KB) ve başlıkların tablolarından ayrılmaması.
+- Doğrulama: 217/217 test, Pint temiz. Örnek nakit akış PDF'i görsel olarak kontrol edildi (Türkçe karakterler ve ₺ doğru); denetim ve dışa aktarma ekranları tarayıcıda denendi.
+
+## Ara iş: cPanel'e yayın hazırlığı (2026-11-19)
+
+- Production ayarları: `FORCE_HTTPS`, `TRUSTED_PROXIES` ve `APP_DEMO` (demo bandı, `noindex`). Güvenlik başlıkları middleware'i eklendi: CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy ve HTTPS'te HSTS.
+- `php artisan finans:demo-data [--with-users]` eklendi: boş sisteme son 3 ayın örnek verisini gerçek servisler üzerinden yükler; yaşlandırmanın her dilimi dolu, tüm mutabakat kontrolleri eşleşiyor.
+- `scripts/build-cpanel.sh` ve `.env.cpanel.example` eklendi; paket `build/zafir-finans-cpanel.zip` olarak üretiliyor. Paket boş bir klasöre açılıp production `.env` ile test edildi: migrate, admin oluşturma, demo verisi, giriş, tüm ekranlar, PDF/Excel indirme, güvenlik başlıkları ve Türkçe 404 sayfası.
+- Rehber: [deploy-cpanel.md](deploy-cpanel.md).
+- Doğrulama: 221/221 test.

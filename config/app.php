@@ -55,6 +55,15 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Barındırma ayarları (cPanel / proxy arkası).
+    | FORCE_HTTPS: üretilen tüm linkler https olur. TRUSTED_PROXIES: "*" veya virgülle IP listesi
+    | (yalnızca Cloudflare gibi bir proxy arkasındaysa). APP_DEMO: demo bandı + arama motoru engeli.
+    */
+    'force_https' => (bool) env('FORCE_HTTPS', false),
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+    'demo' => (bool) env('APP_DEMO', false),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

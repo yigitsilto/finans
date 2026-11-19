@@ -3,11 +3,13 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AgingController;
 use App\Http\Controllers\AnalysisController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\PartnerController;
@@ -80,6 +82,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/api/dashboard', [DashboardController::class, 'api'])->name('api.dashboard');
         Route::get('/reports/analysis', [AnalysisController::class, 'index'])->name('analysis.index');
+        Route::get('/reports/exports', [ExportController::class, 'index'])->name('exports.index');
+        // Yetki controller içinde rapora göre kontrol edilir (denetim kayıtları yalnızca Admin).
+        Route::get('/reports/exports/{report}.{format}', [ExportController::class, 'download'])
+            ->where(['report' => '[a-z]+', 'format' => 'xlsx|pdf'])->middleware('throttle:30,1')->name('exports.download');
 
         Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
         Route::get('/accounts/{account}', [AccountController::class, 'show'])->name('accounts.show');
@@ -97,6 +103,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/receivables/{receivable}', [ReceivableController::class, 'show'])->name('receivables.show');
         Route::get('/aging', [AgingController::class, 'index'])->name('aging.index');
         Route::get('/reports/cashflow', [CashflowController::class, 'index'])->name('cashflow.index');
+    });
+
+    Route::middleware('can:view-audit')->group(function () {
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
+        Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit.show');
     });
 
     Route::middleware('can:manage-users')->group(function () {

@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Partner;
 use App\Models\Transaction;
 use App\Services\TransactionService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -25,34 +26,9 @@ class TransactionController extends Controller
 
     public function index(Request $request): View
     {
-        $filters = $request->validate([
-            'type' => ['nullable', new Enum(TransactionType::class)],
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
-            'account_id' => ['nullable', 'integer'],
-            'category_id' => ['nullable', 'integer'],
-            'q' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', Rule::in(['effective', 'all'])],
-            'sort' => ['nullable', Rule::in(self::SORTABLE)],
-            'dir' => ['nullable', Rule::in(['asc', 'desc'])],
-        ]);
-
+        $filters = self::validateFilters($request);
         $type = isset($filters['type']) ? TransactionType::from($filters['type']) : null;
-
-        $query = Transaction::query()
-            ->with(['category.parent', 'fromAccount', 'toAccount', 'reversal', 'partner'])
-            ->when($type, fn ($q) => $q->where('type', $type))
-            ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('date', '>=', $d))
-            ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('date', '<=', $d))
-            ->when($filters['account_id'] ?? null, fn ($q, $id) => $q->where(fn ($w) => $w->where('from_account_id', $id)->orWhere('to_account_id', $id)))
-            ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where(fn ($w) => $w->where('category_id', $id)->orWhereIn('category_id', Category::where('parent_id', $id)->select('id'))))
-            ->when($filters['q'] ?? null, function ($q, $term) {
-                $like = '%'.str_replace(['%', '_'], ['\%', '\_'], Str::lower($term)).'%';
-                $q->where(fn ($w) => $w->whereRaw('LOWER(description) LIKE ?', [$like])
-                    ->orWhereRaw('LOWER(counterparty) LIKE ?', [$like])
-                    ->orWhereRaw('LOWER(reference_no) LIKE ?', [$like]));
-            })
-            ->when(($filters['status'] ?? 'effective') === 'effective', fn ($q) => $q->effective());
+        $query = self::filteredQuery($filters)->with(['category.parent', 'fromAccount', 'toAccount', 'reversal', 'partner']);
 
         // Toplam, filtrelenmiş kümenin tamamı üzerinden veritabanında hesaplanır (sayfa bazlı değil).
         $total = (clone $query)->reorder()->selectRaw('COALESCE(SUM(amount), 0)::numeric(18,2)::text AS total')->value('total');
@@ -73,6 +49,41 @@ class TransactionController extends Controller
                 ? Category::where('direction', $type->value)->orderBy('sort')->pluck('name', 'id')
                 : collect(),
         ]);
+    }
+
+    /** Liste ekranı ve dışa aktarma aynı filtreyi kullanır. */
+    public static function validateFilters(Request $request): array
+    {
+        return $request->validate([
+            'type' => ['nullable', new Enum(TransactionType::class)],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'account_id' => ['nullable', 'integer'],
+            'category_id' => ['nullable', 'integer'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', Rule::in(['effective', 'all'])],
+            'sort' => ['nullable', Rule::in(self::SORTABLE)],
+            'dir' => ['nullable', Rule::in(['asc', 'desc'])],
+        ]);
+    }
+
+    public static function filteredQuery(array $filters): Builder
+    {
+        $type = isset($filters['type']) ? TransactionType::from($filters['type']) : null;
+
+        return Transaction::query()
+            ->when($type, fn ($q) => $q->where('type', $type))
+            ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('date', '>=', $d))
+            ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('date', '<=', $d))
+            ->when($filters['account_id'] ?? null, fn ($q, $id) => $q->where(fn ($w) => $w->where('from_account_id', $id)->orWhere('to_account_id', $id)))
+            ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where(fn ($w) => $w->where('category_id', $id)->orWhereIn('category_id', Category::where('parent_id', $id)->select('id'))))
+            ->when($filters['q'] ?? null, function ($q, $term) {
+                $like = '%'.str_replace(['%', '_'], ['\%', '\_'], Str::lower($term)).'%';
+                $q->where(fn ($w) => $w->whereRaw('LOWER(description) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(counterparty) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(reference_no) LIKE ?', [$like]));
+            })
+            ->when(($filters['status'] ?? 'effective') === 'effective', fn ($q) => $q->effective());
     }
 
     public function create(Request $request): View

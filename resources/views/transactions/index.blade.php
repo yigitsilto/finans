@@ -47,11 +47,15 @@
             </select>
             <button class="btn btn-secondary">Filtrele</button>
         </form>
+        <div class="actions">
+            <a class="btn btn-secondary" href="{{ route('exports.download', ['report' => 'transactions', 'format' => 'xlsx'] + request()->only(['type', 'from', 'to', 'account_id', 'category_id', 'q', 'status'])) }}">Excel</a>
+            <a class="btn btn-secondary" href="{{ route('exports.download', ['report' => 'transactions', 'format' => 'pdf'] + request()->only(['type', 'from', 'to', 'account_id', 'category_id', 'q', 'status'])) }}">PDF</a>
         @can('write-finance')
             <a class="btn" href="{{ route('transactions.create', ['type' => $type?->value ?? 'inflow']) }}">
                 {{ match ($type?->value) { 'outflow' => 'Yeni çıkış', 'transfer' => 'Yeni transfer', 'opening' => 'Yeni açılış', default => 'Yeni giriş' } }}
             </a>
         @endcan
+        </div>
     </div>
 
     <div class="table-wrap">

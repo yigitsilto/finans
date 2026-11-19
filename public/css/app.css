@@ -291,3 +291,14 @@ a { color: var(--primary); }
 @media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
 /* Etiket içindeki form alanları dikey flex'te uzamasın (mobil). */
 .card-filters label > select, .card-filters label > .input { flex: 0 0 auto; }
+
+/* Sprint 9: denetim ve dışa aktarma */
+.export-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 12px; }
+.export-card .form-row { font-size: 13px; font-weight: 600; }
+.nowrap { white-space: nowrap; }
+.row-warning td { background: var(--warning-soft); }
+pre.json { background: #f6f8fb; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 12px; overflow-x: auto; margin: 0; white-space: pre-wrap; word-break: break-word; }
+
+/* Demo ortamı bandı */
+.demo-banner { background: #9a6700; color: #fff; text-align: center; font-size: 13px; font-weight: 600; padding: 6px 12px; }
+body.guest .demo-banner { position: fixed; top: 0; left: 0; right: 0; }
