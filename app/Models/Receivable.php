@@ -54,7 +54,7 @@ class Receivable extends Model
     public function scopeWithCollected(Builder $query): Builder
     {
         return $query->addSelect([
-            'collected' => Transaction::selectRaw('COALESCE(SUM(amount), 0)::numeric(18,2)::text')
+            'collected' => Transaction::selectRaw('CAST(COALESCE(SUM(amount), 0) AS DECIMAL(18,2))')
                 ->whereColumn('transactions.receivable_id', 'receivables.id'),
         ]);
     }

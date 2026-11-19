@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\Money;
+use App\Support\Sql;
 use Brick\Math\BigDecimal;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -59,13 +60,14 @@ class DashboardService
     private function monthlyFlows(CarbonImmutable $today): array
     {
         $start = $today->startOfMonth()->subMonths(self::TREND_MONTHS - 1);
-        $rows = collect(DB::select(<<<'SQL'
-            SELECT to_char(date_trunc('month', date), 'YYYY-MM') AS month,
-                COALESCE(SUM(amount) FILTER (WHERE type = 'inflow'), 0)::numeric(18,2)::text AS inflow,
-                COALESCE(SUM(amount) FILTER (WHERE type = 'outflow'), 0)::numeric(18,2)::text AS outflow
+        $month = Sql::yearMonth('date');
+        $rows = collect(DB::select(<<<SQL
+            SELECT {$month} AS month,
+                CAST(COALESCE(SUM(CASE WHEN type = 'inflow' THEN amount END), 0) AS DECIMAL(18,2)) AS inflow,
+                CAST(COALESCE(SUM(CASE WHEN type = 'outflow' THEN amount END), 0) AS DECIMAL(18,2)) AS outflow
             FROM transactions
             WHERE type IN ('inflow', 'outflow') AND date BETWEEN ? AND ?
-            GROUP BY 1
+            GROUP BY {$month}
         SQL, [$start->toDateString(), $today->toDateString()]))->keyBy('month');
 
         $result = [];

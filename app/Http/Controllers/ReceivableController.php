@@ -41,8 +41,8 @@ class ReceivableController extends Controller
         $totals = DB::query()->fromSub(
             (clone $base)->reorder()->select('receivables.amount')->selectRaw(self::COLLECTED_SQL.' AS collected')->whereNull('cancelled_at'),
             'f'
-        )->selectRaw('COALESCE(SUM(amount), 0)::numeric(18,2)::text AS amount, COALESCE(SUM(collected), 0)::numeric(18,2)::text AS collected,
-            COALESCE(SUM(amount - collected), 0)::numeric(18,2)::text AS remaining, COUNT(*) AS count')->first();
+        )->selectRaw('CAST(COALESCE(SUM(amount), 0) AS DECIMAL(18,2)) AS amount, CAST(COALESCE(SUM(collected), 0) AS DECIMAL(18,2)) AS collected,
+            CAST(COALESCE(SUM(amount - collected), 0) AS DECIMAL(18,2)) AS remaining, COUNT(*) AS count')->first();
 
         $receivables = $base->with('customer')->select('receivables.*')->withCollected()
             ->orderBy($filters['sort'] ?? 'due_date', $filters['dir'] ?? 'asc')->orderBy('id')

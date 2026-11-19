@@ -1,7 +1,7 @@
 # cPanel'e Kurulum: finans.sigortacimzafir.com
 
 Bu rehber uygulamayı Hızhosting cPanel'e, `finans.sigortacimzafir.com` alt alan adına kurar.
-Kurulacak paket: `build/zafir-finans-cpanel.zip` (`sh scripts/build-cpanel.sh` ile üretilir).
+Kurulacak paket: `build/zafir-finans-cpanel.zip` (`sh scripts/build-cpanel.sh` ile üretilir). `public_html/finans` kurulumu için: `sh scripts/build-cpanel.sh finans` → `build/finans-cpanel.zip`.
 
 Yapı şöyle olacak:
 
@@ -18,6 +18,34 @@ Yapı şöyle olacak:
 > yalnızca `public` klasörünü gösterir.
 
 ---
+
+## Veritabanı: MariaDB (Hızhosting) veya PostgreSQL
+
+Uygulama hem **PostgreSQL** hem **MariaDB 10.11** ile çalışır. Test paketi (221 test) iki veritabanında da çalıştırılır.
+Hızhosting sunucusu **MariaDB 10.11**'dir; kurulum phpMyAdmin üzerinden yapılır:
+
+1. cPanel → **MySQL Veritabanları**: veritabanı ve kullanıcıyı oluşturun, kullanıcıyı veritabanına **TÜM YETKİLER** ile ekleyin.
+2. **phpMyAdmin** → soldan veritabanını seçin → **İçe Aktar**:
+   - `1-tablolar-ve-kullanicilar.sql`: tablolar, kategoriler, kullanıcılar ve fazla tahsilat trigger'ları.
+   - (opsiyonel) `2-demo-veri.sql`: son 3 ayın demo verisi.
+   - 1. dosya **#1419 SUPER privilege** hatası verirse (sunucuda binary log açıkken trigger oluşturulamaz): veritabanını boşaltın, onun yerine `1-yedek-triggersiz.sql` dosyasını içe aktarın. Fazla tahsilat koruması uygulama katmanında (alacak satırı kilitlenerek) çalışmaya devam eder; yalnızca veritabanı seviyesindeki ikinci kontrol olmaz.
+3. `.env`: `DB_CONNECTION=mariadb`, `DB_HOST=localhost`, `DB_PORT=3306`.
+
+SQL dosyaları sunucudaki MariaDB 10.11.19 ile aynı sürümde, yalnızca kendi veritabanında yetkisi olan bir kullanıcıyla içe aktarılarak test edildi.
+
+## Alternatif kurulum: ana alan adında klasör (şu an kullanılan)
+
+Uygulama `public_html/finans` klasöründe çalışır: **https://sigortacimzafir.com/finans/public/**
+
+- Proje kökündeki `.htaccess` dosyası **zorunludur**: yalnızca `public/` klasörünü açar; `.env`, kod, `vendor`, `storage` ve nokta ile başlayan tüm dosyalar 403 döner. `/finans/` adresi `/finans/public/` adresine yönlenir. (Apache'de test edildi.)
+- `.env` içinde:
+
+  ```text
+  APP_URL=https://sigortacimzafir.com/finans/public
+  SESSION_PATH=/finans
+  ```
+
+- Kontrol: `https://sigortacimzafir.com/finans/.env` adresi **403** dönmeli.
 
 ## Adım 0 – Ön kontrol (5 dk)
 

@@ -91,7 +91,7 @@ class ExpenseService
     {
         $rows = collect(DB::select(<<<'SQL'
             SELECT COALESCE(p.id, c.id) AS group_id, COALESCE(p.name, c.name) AS group_name, c.id AS category_id,
-                   c.name AS category_name, c.cost_type, c.activity, SUM(t.amount)::numeric(18,2)::text AS total
+                   c.name AS category_name, c.cost_type, c.activity, CAST(SUM(t.amount) AS DECIMAL(18,2)) AS total
             FROM transactions t
             JOIN categories c ON c.id = t.category_id
             LEFT JOIN categories p ON p.id = c.parent_id

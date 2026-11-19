@@ -25,7 +25,7 @@ class BalanceService
 
         $rows = DB::select(<<<'SQL'
             SELECT a.id,
-                   COALESCE(SUM(CASE WHEN t.to_account_id = a.id THEN t.amount ELSE -t.amount END), 0)::numeric(18,2)::text AS balance
+                   CAST(COALESCE(SUM(CASE WHEN t.to_account_id = a.id THEN t.amount ELSE -t.amount END), 0) AS DECIMAL(18,2)) AS balance
             FROM accounts a
             LEFT JOIN transactions t
                    ON (t.to_account_id = a.id OR t.from_account_id = a.id) AND t.date <= ?
@@ -43,7 +43,7 @@ class BalanceService
     public function balance(Account $account, ?CarbonInterface $asOf = null): string
     {
         $row = DB::selectOne(<<<'SQL'
-            SELECT COALESCE(SUM(CASE WHEN to_account_id = ? THEN amount ELSE -amount END), 0)::numeric(18,2)::text AS balance
+            SELECT CAST(COALESCE(SUM(CASE WHEN to_account_id = ? THEN amount ELSE -amount END), 0) AS DECIMAL(18,2)) AS balance
             FROM transactions
             WHERE (to_account_id = ? OR from_account_id = ?) AND date <= ?
         SQL, [$account->id, $account->id, $account->id, ($asOf ?? today())->toDateString()]);
@@ -66,7 +66,7 @@ class BalanceService
             ), running AS (
                 SELECT date, SUM(net) OVER (ORDER BY date) AS balance FROM daily
             )
-            SELECT COALESCE(MIN(balance), 0)::numeric(18,2)::text AS minimum FROM running WHERE date >= ?
+            SELECT CAST(COALESCE(MIN(balance), 0) AS DECIMAL(18,2)) AS minimum FROM running WHERE date >= ?
         SQL, [$account->id, $account->id, $account->id, $from->toDateString()]);
 
         return $row->minimum;

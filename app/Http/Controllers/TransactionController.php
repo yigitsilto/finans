@@ -31,7 +31,7 @@ class TransactionController extends Controller
         $query = self::filteredQuery($filters)->with(['category.parent', 'fromAccount', 'toAccount', 'reversal', 'partner']);
 
         // Toplam, filtrelenmiş kümenin tamamı üzerinden veritabanında hesaplanır (sayfa bazlı değil).
-        $total = (clone $query)->reorder()->selectRaw('COALESCE(SUM(amount), 0)::numeric(18,2)::text AS total')->value('total');
+        $total = (clone $query)->reorder()->selectRaw('CAST(COALESCE(SUM(amount), 0) AS DECIMAL(18,2)) AS total')->value('total');
 
         $transactions = $query
             ->orderBy($filters['sort'] ?? 'date', $filters['dir'] ?? 'desc')

@@ -47,10 +47,10 @@ class PartnerService
 
         $cash = collect(DB::select(<<<SQL
             SELECT t.partner_id,
-                COALESCE(SUM(t.amount) FILTER (WHERE c.code = 'partner_capital'), 0)::numeric(18,2)::text AS capital,
-                COALESCE(SUM(t.amount) FILTER (WHERE c.code = 'partner_loan_received'), 0)::numeric(18,2)::text AS loans_in,
-                COALESCE(SUM(t.amount) FILTER (WHERE c.code = 'partner_loan_repayment'), 0)::numeric(18,2)::text AS loan_repayments,
-                COALESCE(SUM(t.amount) FILTER (WHERE c.code = 'partner_payment'), 0)::numeric(18,2)::text AS payments
+                CAST(COALESCE(SUM(CASE WHEN c.code = 'partner_capital' THEN t.amount END), 0) AS DECIMAL(18,2)) AS capital,
+                CAST(COALESCE(SUM(CASE WHEN c.code = 'partner_loan_received' THEN t.amount END), 0) AS DECIMAL(18,2)) AS loans_in,
+                CAST(COALESCE(SUM(CASE WHEN c.code = 'partner_loan_repayment' THEN t.amount END), 0) AS DECIMAL(18,2)) AS loan_repayments,
+                CAST(COALESCE(SUM(CASE WHEN c.code = 'partner_payment' THEN t.amount END), 0) AS DECIMAL(18,2)) AS payments
             FROM transactions t JOIN categories c ON c.id = t.category_id
             WHERE t.partner_id IN ({$in})
             GROUP BY t.partner_id
@@ -58,7 +58,7 @@ class PartnerService
 
         $adjustments = collect(DB::select(<<<SQL
             SELECT partner_id,
-                COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0)::numeric(18,2)::text AS net
+                CAST(COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE -amount END), 0) AS DECIMAL(18,2)) AS net
             FROM partner_adjustments WHERE partner_id IN ({$in}) GROUP BY partner_id
         SQL, $ids))->keyBy('partner_id');
 

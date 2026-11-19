@@ -66,6 +66,15 @@ return new class extends Migration
          * - Tahsilat toplamı 0 ile alacak tutarı arasında kalmalıdır.
          * Alacak satırı FOR UPDATE kilitlenir, eşzamanlı tahsilatlar sıralanır.
          */
+        if (DB::getDriverName() === 'pgsql') {
+            $this->postgresTriggers();
+        } else {
+            $this->mariadbTriggers();
+        }
+    }
+
+    private function postgresTriggers(): void
+    {
         DB::unprepared(<<<'SQL'
             CREATE OR REPLACE FUNCTION check_receivable_collection() RETURNS trigger AS $$
             DECLARE
@@ -126,12 +135,76 @@ return new class extends Migration
         SQL);
     }
 
+    /**
+     * MariaDB 10.11 karşılığı. Her olay için ayrı trigger gerekir; gövde aynı kural setini uygular.
+     * Mesajlar PostgreSQL sürümüyle aynıdır.
+     */
+    private function mariadbTriggers(): void
+    {
+        $collectionCheck = <<<'SQL'
+            BEGIN
+                DECLARE v_total DECIMAL(18,2);
+                DECLARE v_cancelled TIMESTAMP DEFAULT NULL;
+                DECLARE v_collected DECIMAL(18,2);
+                DECLARE v_message VARCHAR(255);
+
+                IF NEW.receivable_id IS NOT NULL THEN
+                    SELECT amount, cancelled_at INTO v_total, v_cancelled FROM receivables WHERE id = NEW.receivable_id FOR UPDATE;
+
+                    IF NEW.type <> 'inflow' THEN
+                        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Alacak tahsilatı yalnızca nakit girişi olabilir';
+                    END IF;
+                    IF NEW.amount > 0 AND v_cancelled IS NOT NULL THEN
+                        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'İptal edilmiş alacağa tahsilat yazılamaz';
+                    END IF;
+
+                    SELECT COALESCE(SUM(amount), 0) INTO v_collected FROM transactions WHERE receivable_id = NEW.receivable_id;
+
+                    IF v_collected > v_total THEN
+                        SET v_message = CONCAT('Tahsilat toplamı (', v_collected, ') alacak tutarını (', v_total, ') aşamaz');
+                        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_message;
+                    END IF;
+                    IF v_collected < 0 THEN
+                        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Tahsilat toplamı negatif olamaz';
+                    END IF;
+                END IF;
+            END
+        SQL;
+
+        DB::unprepared("CREATE TRIGGER transactions_receivable_collection_ai AFTER INSERT ON transactions FOR EACH ROW {$collectionCheck}");
+        DB::unprepared("CREATE TRIGGER transactions_receivable_collection_au AFTER UPDATE ON transactions FOR EACH ROW {$collectionCheck}");
+
+        DB::unprepared(<<<'SQL'
+            CREATE TRIGGER receivables_amount_guard BEFORE UPDATE ON receivables FOR EACH ROW
+            BEGIN
+                DECLARE v_collected DECIMAL(18,2);
+                DECLARE v_message VARCHAR(255);
+
+                SELECT COALESCE(SUM(amount), 0) INTO v_collected FROM transactions WHERE receivable_id = NEW.id;
+
+                IF NEW.amount < v_collected THEN
+                    SET v_message = CONCAT('Alacak tutarı tahsil edilen tutarın (', v_collected, ') altına düşürülemez');
+                    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_message;
+                END IF;
+                IF NEW.cancelled_at IS NOT NULL AND v_collected <> 0 THEN
+                    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Tahsilatı olan alacak iptal edilemez';
+                END IF;
+            END
+        SQL);
+    }
+
     public function down(): void
     {
-        DB::unprepared('DROP TRIGGER IF EXISTS transactions_receivable_collection ON transactions');
-        DB::unprepared('DROP FUNCTION IF EXISTS check_receivable_collection()');
-        DB::unprepared('DROP TRIGGER IF EXISTS receivables_amount_guard ON receivables');
-        DB::unprepared('DROP FUNCTION IF EXISTS check_receivable_update()');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared('DROP TRIGGER IF EXISTS transactions_receivable_collection ON transactions');
+            DB::unprepared('DROP FUNCTION IF EXISTS check_receivable_collection()');
+            DB::unprepared('DROP TRIGGER IF EXISTS receivables_amount_guard ON receivables');
+            DB::unprepared('DROP FUNCTION IF EXISTS check_receivable_update()');
+        } else {
+            DB::unprepared('DROP TRIGGER IF EXISTS transactions_receivable_collection_ai');
+            DB::unprepared('DROP TRIGGER IF EXISTS transactions_receivable_collection_au');
+            DB::unprepared('DROP TRIGGER IF EXISTS receivables_amount_guard');
+        }
         Schema::table('transactions', fn (Blueprint $table) => $table->dropConstrainedForeignId('receivable_id'));
         Schema::dropIfExists('receivables');
         Schema::dropIfExists('customers');

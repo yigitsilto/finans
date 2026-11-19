@@ -96,3 +96,15 @@
 - `scripts/build-cpanel.sh` ve `.env.cpanel.example` eklendi; paket `build/zafir-finans-cpanel.zip` olarak üretiliyor. Paket boş bir klasöre açılıp production `.env` ile test edildi: migrate, admin oluşturma, demo verisi, giriş, tüm ekranlar, PDF/Excel indirme, güvenlik başlıkları ve Türkçe 404 sayfası.
 - Rehber: [deploy-cpanel.md](deploy-cpanel.md).
 - Doğrulama: 221/221 test.
+
+## Ara iş: MariaDB 10.11 desteği (2026-11-19)
+
+- Hızhosting sunucusunda PostgreSQL yok, MariaDB 10.11 var. Uygulama iki veritabanında da çalışacak hale getirildi; PostgreSQL desteği korundu.
+- `App\Support\Sql` yardımcısı eklendi. `FILTER (WHERE)` ifadeleri `SUM(CASE WHEN)` ile, `::numeric::text` dönüşümleri `CAST(... AS DECIMAL(18,2))` ile, yaşlandırmadaki `LATERAL` gruplanmış alt sorguyla değiştirildi; tarih farkı ve ay biçimi sürücüye göre üretiliyor.
+- Migration'lar: kullanıcı adı indeksi ve `setval` sürücüye göre. Fazla tahsilat trigger'ları MariaDB'de `SIGNAL SQLSTATE '45000'` ile yazıldı (INSERT, UPDATE ve alacak güncellemesi için 3 trigger; mesajlar aynı).
+- Docker'a `mariadb:10.11` servisi (profile: mariadb), Dockerfile'a `pdo_mysql` ve `phpunit.mariadb.xml` eklendi.
+- Doğrulama:
+  - **221/221 test PostgreSQL'de, 221/221 test MariaDB 10.11'de** geçiyor.
+  - Demo verisi iki veritabanında aynı rakamları veriyor (kullanılabilir nakit 444.182,06 ₺).
+  - phpMyAdmin için üretilen SQL dosyaları yalnızca kendi veritabanında yetkili bir kullanıcıyla içe aktarıldı; giriş, mutabakat ve eşzamanlı fazla tahsilat engeli denendi.
+- Bulunan ve düzeltilen hatalar: trigger'da `TIMESTAMP NULL` değişken tanımı (MariaDB `DEFAULT NULL` istiyor), phpunit XML yorumunda `--`, testte sabit `pgsql` bağlantı adı.

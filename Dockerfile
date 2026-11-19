@@ -2,7 +2,7 @@ FROM php:8.3-apache
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq-dev libzip-dev libpng-dev libicu-dev unzip postgresql-client \
-    && docker-php-ext-install pdo_pgsql bcmath zip gd intl \
+    && docker-php-ext-install pdo_pgsql pdo_mysql bcmath zip gd intl \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 

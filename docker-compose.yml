@@ -37,5 +37,24 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Yalnızca MariaDB uyumluluk testleri için (cPanel sunucusu MariaDB 10.11):
+  #   docker compose --profile mariadb up -d mariadb
+  mariadb:
+    image: mariadb:10.11
+    container_name: finans-mariadb
+    profiles: ["mariadb"]
+    environment:
+      MARIADB_DATABASE: finans_test
+      MARIADB_USER: finans
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
 volumes:
   pgdata:

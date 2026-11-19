@@ -220,12 +220,12 @@ class CashflowService
 
         $row = DB::selectOne(<<<'SQL'
             SELECT
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'inflow'), 0)::numeric(18,2)::text AS inflow,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'outflow'), 0)::numeric(18,2)::text AS outflow,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'opening' AND ta.type <> 'pos'), 0)::numeric(18,2)::text AS openings_available,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'opening' AND ta.type = 'pos'), 0)::numeric(18,2)::text AS openings_pos,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'inflow' AND ta.type = 'pos'), 0)
-                  - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'transfer' AND fa.type = 'pos'), 0) AS pos_change
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'inflow' THEN t.amount END), 0) AS DECIMAL(18,2)) AS inflow,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'outflow' THEN t.amount END), 0) AS DECIMAL(18,2)) AS outflow,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'opening' AND ta.type <> 'pos' THEN t.amount END), 0) AS DECIMAL(18,2)) AS openings_available,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'opening' AND ta.type = 'pos' THEN t.amount END), 0) AS DECIMAL(18,2)) AS openings_pos,
+                COALESCE(SUM(CASE WHEN t.type = 'inflow' AND ta.type = 'pos' THEN t.amount END), 0)
+                  - COALESCE(SUM(CASE WHEN t.type = 'transfer' AND fa.type = 'pos' THEN t.amount END), 0) AS pos_change
             FROM transactions t
             LEFT JOIN accounts ta ON ta.id = t.to_account_id
             LEFT JOIN accounts fa ON fa.id = t.from_account_id
@@ -277,7 +277,7 @@ class CashflowService
         return collect(DB::select(<<<'SQL'
             SELECT t.type, c.id, c.code, c.name, c.activity, c.cost_type, c.sort,
                    COALESCE(p.name, c.name) AS group_name, COALESCE(p.sort, c.sort) AS group_sort,
-                   SUM(t.amount)::numeric(18,2)::text AS total
+                   CAST(SUM(t.amount) AS DECIMAL(18,2)) AS total
             FROM transactions t
             JOIN categories c ON c.id = t.category_id
             LEFT JOIN categories p ON p.id = c.parent_id
@@ -293,11 +293,11 @@ class CashflowService
     {
         $rows = DB::select(<<<'SQL'
             SELECT a.id,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'opening' AND t.to_account_id = a.id), 0)::text AS openings,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'inflow' AND t.to_account_id = a.id), 0)::text AS inflow,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'outflow' AND t.from_account_id = a.id), 0)::text AS outflow,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'transfer' AND t.to_account_id = a.id), 0)::text AS transfer_in,
-                COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'transfer' AND t.from_account_id = a.id), 0)::text AS transfer_out
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'opening' AND t.to_account_id = a.id THEN t.amount END), 0) AS DECIMAL(18,2)) AS openings,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'inflow' AND t.to_account_id = a.id THEN t.amount END), 0) AS DECIMAL(18,2)) AS inflow,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'outflow' AND t.from_account_id = a.id THEN t.amount END), 0) AS DECIMAL(18,2)) AS outflow,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'transfer' AND t.to_account_id = a.id THEN t.amount END), 0) AS DECIMAL(18,2)) AS transfer_in,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'transfer' AND t.from_account_id = a.id THEN t.amount END), 0) AS DECIMAL(18,2)) AS transfer_out
             FROM accounts a
             LEFT JOIN transactions t ON (t.to_account_id = a.id OR t.from_account_id = a.id) AND t.date BETWEEN ? AND ?
             GROUP BY a.id

@@ -24,7 +24,9 @@ return new class extends Migration
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::statement("SELECT setval('companies_id_seq', 1)");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("SELECT setval('companies_id_seq', 1)");
+        }
     }
 
     public function down(): void

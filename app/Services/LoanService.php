@@ -227,8 +227,8 @@ class LoanService
     {
         $paid = DB::selectOne(<<<'SQL'
             SELECT
-                COALESCE(SUM(t.amount) FILTER (WHERE c.code = 'loan_principal'), 0)::numeric(18,2)::text AS principal,
-                COALESCE(SUM(t.amount) FILTER (WHERE c.code = 'loan_interest'), 0)::numeric(18,2)::text AS interest
+                CAST(COALESCE(SUM(CASE WHEN c.code = 'loan_principal' THEN t.amount END), 0) AS DECIMAL(18,2)) AS principal,
+                CAST(COALESCE(SUM(CASE WHEN c.code = 'loan_interest' THEN t.amount END), 0) AS DECIMAL(18,2)) AS interest
             FROM transactions t JOIN categories c ON c.id = t.category_id
             WHERE t.loan_id = ? AND t.type = 'outflow'
         SQL, [$loan->id]);

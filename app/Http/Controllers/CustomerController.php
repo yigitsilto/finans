@@ -21,7 +21,7 @@ class CustomerController extends Controller
         ]);
 
         $outstanding = DB::table('receivables as r')
-            ->selectRaw('COALESCE(SUM(r.amount - COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.receivable_id = r.id), 0)), 0)::numeric(18,2)::text')
+            ->selectRaw('CAST(COALESCE(SUM(r.amount - COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.receivable_id = r.id), 0)), 0) AS DECIMAL(18,2))')
             ->whereColumn('r.customer_id', 'customers.id')
             ->whereNull('r.cancelled_at');
 

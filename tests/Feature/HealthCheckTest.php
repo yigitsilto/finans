@@ -16,8 +16,9 @@ class HealthCheckTest extends TestCase
 
     public function test_health_endpoint_returns_503_without_leaking_details_when_database_is_down(): void
     {
-        config(['database.connections.pgsql.port' => 1]);
-        DB::purge('pgsql');
+        $connection = config('database.default');
+        config(["database.connections.{$connection}.port" => 1]);
+        DB::purge($connection);
 
         $response = $this->getJson('/health');
 

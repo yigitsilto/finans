@@ -1,0 +1,20 @@
+# Uygulama bir alan adının alt klasöründe (ör. public_html/finans) çalıştığında koruma:
+# yalnızca public/ klasörü erişilebilir; .env, kod, loglar ve vendor dışarıdan açılamaz.
+# (Docker'da belge kökü zaten public/ olduğu için bu dosya kullanılmaz.)
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # /finans veya /finans/ → /finans/public/
+    RewriteRule ^$ %{REQUEST_URI}public/ [R=302,L]
+
+    # public/ dışındaki her istek: 403
+    RewriteRule ^(?!public/) - [F,L]
+</IfModule>
+
+# Ek güvenlik: nokta ile başlayan dosyalar (.env, .git ...) hiçbir koşulda sunulmaz
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

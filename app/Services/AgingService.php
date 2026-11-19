@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\Money;
+use App\Support\Sql;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Carbon\CarbonImmutable;
@@ -55,27 +56,35 @@ class AgingService
     {
         $date = $reportDate->toDateString();
 
-        $rows = DB::select(<<<'SQL'
+        $days = Sql::daysBetween('CAST(? AS DATE)', 'r.due_date');
+        $customerFilter = $customerId ? 'AND r.customer_id = ?' : '';
+
+        // Not: LATERAL yerine gruplanmış alt sorgu (MariaDB uyumu).
+        $rows = DB::select(<<<SQL
             SELECT r.id, r.customer_id, c.name AS customer_name, r.reference_no, r.insurance_company,
-                   r.amount::text AS amount, r.issue_date::text AS issue_date, r.due_date::text AS due_date,
-                   COALESCE(col.collected, 0)::numeric(18,2)::text AS collected,
-                   (r.amount - COALESCE(col.collected, 0))::numeric(18,2)::text AS remaining,
-                   (CAST(? AS date) - r.due_date) AS days
+                   r.amount AS amount, r.issue_date AS issue_date, r.due_date AS due_date,
+                   CAST(COALESCE(col.collected, 0) AS DECIMAL(18,2)) AS collected,
+                   CAST(r.amount - COALESCE(col.collected, 0) AS DECIMAL(18,2)) AS remaining,
+                   {$days} AS days
             FROM receivables r
             JOIN customers c ON c.id = r.customer_id
-            LEFT JOIN LATERAL (
-                SELECT SUM(t.amount) AS collected FROM transactions t
-                WHERE t.receivable_id = r.id AND t.date <= CAST(? AS date)
-            ) col ON TRUE
-            WHERE r.issue_date <= CAST(? AS date)
-              AND (r.cancelled_at IS NULL OR r.cancelled_at::date > CAST(? AS date))
-              AND (CAST(? AS bigint) IS NULL OR r.customer_id = CAST(? AS bigint))
+            LEFT JOIN (
+                SELECT t.receivable_id, SUM(t.amount) AS collected FROM transactions t
+                WHERE t.receivable_id IS NOT NULL AND t.date <= CAST(? AS DATE)
+                GROUP BY t.receivable_id
+            ) col ON col.receivable_id = r.id
+            WHERE r.issue_date <= CAST(? AS DATE)
+              AND (r.cancelled_at IS NULL OR CAST(r.cancelled_at AS DATE) > CAST(? AS DATE))
+              {$customerFilter}
               AND r.amount - COALESCE(col.collected, 0) > 0
-            ORDER BY (CAST(? AS date) - r.due_date) DESC, r.id
-        SQL, [$date, $date, $date, $date, $customerId, $customerId, $date]);
+            ORDER BY days DESC, r.id
+        SQL, array_values(array_filter([$date, $date, $date, $date, $customerId], fn ($v) => $v !== null)));
 
         return collect($rows)->map(function ($row) {
             $row->days = (int) $row->days;
+            $row->amount = (string) $row->amount;
+            $row->issue_date = substr((string) $row->issue_date, 0, 10);
+            $row->due_date = substr((string) $row->due_date, 0, 10);
             $row->bucket = self::bucket($row->days);
 
             return $row;
